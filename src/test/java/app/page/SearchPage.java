@@ -3,6 +3,7 @@ package app.page;
 import io.appium.java_client.MobileElement;
 import org.openqa.selenium.By;
 
+import java.util.HashMap;
 
 
 /**
@@ -15,13 +16,18 @@ public class SearchPage extends BasePage{
     private By name = By.id("com.xueqiu.android:id/name");
 
     public SearchPage search(String keyword){
-        APP.driver.findElement(inputText).sendKeys(keyword);
+        HashMap<String,Object> map = new HashMap<>();
+        map.put("keyword",keyword);
+        setParams(map);
+        parseSteps();
+//        APP.driver.findElement(inputText).sendKeys(keyword);
         click(name);
         return this;
     }
 
     public APP cancel(){
-        click(By.id("com.xueqiu.android:id/action_close"));
+//        click(By.id("com.xueqiu.android:id/action_close"));
+        parseSteps();
         return new APP();
     }
 
@@ -30,7 +36,11 @@ public class SearchPage extends BasePage{
         return this;
     }
 
-    public Float getCurrentPrice(){
-        return Float.valueOf(findElement(By.id("com.xueqiu.android:id/current_price")).getText());
+    public Float getCurrentPrices(Float price){
+        HashMap<String,Object> map = new HashMap<>();
+        map.put("price",price);
+        setResults(map);
+        parseSteps();
+        return Float.valueOf(getResults().get("price").toString());
     }
 }

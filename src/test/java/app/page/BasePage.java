@@ -1,5 +1,11 @@
 package app.page;
 
+import app.framework.PageObjectMethod;
+import app.framework.PageObjectModel;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.appium.java_client.MobileBy;
 import io.appium.java_client.TouchAction;
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.touch.offset.PointOption;
@@ -8,7 +14,9 @@ import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebElement;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -17,8 +25,31 @@ import java.util.concurrent.TimeUnit;
  * @Date 2021/6/1
  */
 public class BasePage {
+
     public static AndroidDriver<WebElement> driver;
-    
+
+    private PageObjectModel model = new PageObjectModel();
+
+    private static HashMap<String,Object> params = new HashMap<>();
+
+    public static HashMap<String, Object> getParams() {
+        return params;
+    }
+
+    public static void setParams(HashMap<String, Object> params) {
+        BasePage.params = params;
+    }
+
+    private static HashMap<String,Object> results;
+
+    public static HashMap<String, Object> getResults() {
+        return results;
+    }
+
+    public static void setResults(HashMap<String, Object> results) {
+        BasePage.results = results;
+    }
+
     //封装findElement
     public static WebElement findElement(By by){
         System.out.println(by);
@@ -81,4 +112,70 @@ public class BasePage {
         driver.manage().timeouts().implicitlyWait(5, TimeUnit.SECONDS);
     }
 
+    public void parseSteps(){
+        String method = Thread.currentThread().getStackTrace()[2].getMethodName();
+        System.out.println(method);
+        parseSteps(method);
+    }
+    public void parseSteps(String method){
+        //拼接YAML文件路径
+        String path = "/"+ this.getClass().getCanonicalName().replace(".","/") + ".yaml";
+        System.out.println(path);
+        System.out.println(method);
+        parseSteps( path , method );
+    }
+    public void parseSteps(String path,String method){
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        System.out.println(BasePage.class.getResourceAsStream(path));
+        try{
+            model = mapper.readValue(
+                    BasePage.class.getResourceAsStream(path),PageObjectModel.class
+            );
+            System.out.println(model.methods.get(method));
+            parseSteps(model.methods.get(method));
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public void parseSteps(PageObjectMethod steps){
+        steps.getSteps().forEach(step->{
+            WebElement element = null;
+
+            String id = step.get("id").toString();
+            if(id != null){
+                element = findElement(By.id(id));
+            }else if(step.get("aid") != null){
+                element = findElement(MobileBy.AccessibilityId(step.get("aid").toString()));
+            }else if(step.get("xpath") != null){
+                element = findElement(By.xpath(step.get("xpath").toString()));
+            }else if(step.get("element") != null){
+                element = findElement(model.elements.get(step.get("element")).getLocator());
+            }
+
+            //将${keyword}替换
+            if(step.get("send") != null){
+                String send = step.get("send").toString();
+                System.out.println(send);
+                for(Map.Entry<String,Object> entry : params.entrySet()){
+                    String keyword = "${" + entry.getKey() + "}";
+                    if(send.contains(keyword)){
+                        System.out.println(entry);
+                        send = send.replace(keyword , entry.getValue().toString());
+                    }
+                }
+
+                element.sendKeys(send);
+
+            }else if(step.get("get") != null){
+                System.out.println(step.get("get"));
+                String attribute = element.getAttribute(step.get("get").toString());
+                System.out.println(attribute);
+                System.out.println(step.get("dump"));
+                getResults().put(step.get("dump").toString(),attribute);
+                System.out.println("over");
+            }else{
+                element.click();
+            }
+        });
+    }
 }

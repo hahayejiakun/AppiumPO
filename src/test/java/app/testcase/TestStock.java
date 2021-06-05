@@ -30,7 +30,7 @@ public class TestStock {
         stockpage = APP.getInstance().toStocks();
     }
     @Test
-    void addDefaultSelectedStocks(){
+    void addDefaultSelectedStocks1(){
         if(stockpage.getAllStock().size() >= 1){
             stockpage.deleteAll();
         }
