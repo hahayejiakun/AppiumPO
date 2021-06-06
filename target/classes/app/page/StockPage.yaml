@@ -1,8 +1,0 @@
-methods:
-  deleteAll:
-    steps:
-      - id: edit_group
-      - id: check_all
-      - id: cancel_follow
-      - id: tv_right
-      - id: action_close
